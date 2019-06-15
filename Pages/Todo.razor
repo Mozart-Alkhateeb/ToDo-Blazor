@@ -1,0 +1,70 @@
+@page "/todo"
+<!-- Import HTTP -->
+@inject HttpClient Http 
+
+<h1>Todo</h1>
+
+<div class="row">
+    <div class="col-10">
+        <input placeholder="Something todo" @bind="@description" class="form-control" />
+    </div>
+    <div class="col-2">
+        <button @onclick="@AddTodo" class="btn btn-primary  mb-2">Add Todo</button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <ul class="list-group">
+            @foreach (var todo in todos)
+            {
+                switch (@todo.Status)
+                {
+                    case "Pending":
+                        <li class="list-group-item list-group-item-info d-flex justify-content-between align-items-center">
+                                <span>@todo.Description</span>
+                                <span class="font-weight-bold">@todo.Status</span>
+                        </li>
+                        break;
+                    case "In Progress":
+                        <li class="list-group-item list-group-item-success d-flex justify-content-between align-items-center">
+                                <span>@todo.Description</span>
+                                <span class="font-weight-bold">@todo.Status</span>
+                        </li>
+                        break;
+                    case "Done":
+                        <li class="list-group-item list-group-item-primary d-flex justify-content-between align-items-center">
+                                <span>@todo.Description</span>
+                                <span class="font-weight-bold">@todo.Status</span>
+                        </li>
+                        break;
+                    case "Cancelled":
+                        <li class="list-group-item list-group-item-warning d-flex justify-content-between align-items-center">
+                                <span>@todo.Description</span>
+                                <span class="font-weight-bold">@todo.Status</span>
+                        </li>
+                        break;
+                }               
+            }
+        </ul>
+    </div>
+</div>
+
+@code {
+    private IList<ToDo.Blazor.Models.ToDo> todos = new List<ToDo.Blazor.Models.ToDo>();
+    string description;
+
+    protected override async Task OnInitAsync()
+    {
+        todos = await Http.GetJsonAsync<List<ToDo.Blazor.Models.ToDo>>("http://localhost:58635/api/ToDos");
+    }
+
+    private void AddTodo()
+    {
+        if (!string.IsNullOrWhiteSpace(description))
+        {
+            todos.Add(new ToDo.Blazor.Models.ToDo { Description = description });
+            description = string.Empty;
+        }
+    }
+}
