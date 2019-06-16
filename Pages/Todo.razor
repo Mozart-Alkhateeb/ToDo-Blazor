@@ -5,11 +5,19 @@
 <h1>Todo</h1>
 
 <div class="row">
-    <div class="col-10">
+    <div class="col-8">
         <input placeholder="Something todo" @bind="@description" class="form-control" />
     </div>
     <div class="col-2">
-        <button @onclick="@AddTodo" class="btn btn-primary  mb-2">Add Todo</button>
+        <select @bind="@status">
+            <option value="Pending">Pending</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Done">Done</option>
+            <option value="Cancelled">Cancelled</option>
+        </select>
+    </div>
+    <div class="col-2">
+        <button @onclick="@SaveTodo" class="btn btn-primary  mb-2">Save Todo</button>
     </div>
 </div>
 
@@ -23,25 +31,37 @@
                     case "Pending":
                         <li class="list-group-item list-group-item-info d-flex justify-content-between align-items-center">
                                 <span>@todo.Description</span>
-                                <span class="font-weight-bold">@todo.Status</span>
+                                <div>
+                                    <span class="font-weight-bold">@todo.Status</span>
+                                    <span><button class="btn btn-outline-primary oi oi-pencil" @onclick="@(e => Edit(@todo.Id))"></button></span>
+                                </div>
                         </li>
                         break;
                     case "In Progress":
                         <li class="list-group-item list-group-item-success d-flex justify-content-between align-items-center">
                                 <span>@todo.Description</span>
-                                <span class="font-weight-bold">@todo.Status</span>
+                                <div>
+                                    <span class="font-weight-bold">@todo.Status</span>
+                                    <span><button class="btn btn-outline-primary oi oi-pencil" @onclick="@(e => Edit(@todo.Id))"></button></span>
+                                </div>
                         </li>
                         break;
                     case "Done":
                         <li class="list-group-item list-group-item-primary d-flex justify-content-between align-items-center">
                                 <span>@todo.Description</span>
-                                <span class="font-weight-bold">@todo.Status</span>
+                                <div>
+                                    <span class="font-weight-bold">@todo.Status</span>
+                                    <span><button class="btn btn-outline-primary oi oi-pencil" @onclick="@(e => Edit(@todo.Id))"></button></span>
+                                </div>
                         </li>
                         break;
                     case "Cancelled":
                         <li class="list-group-item list-group-item-warning d-flex justify-content-between align-items-center">
                                 <span>@todo.Description</span>
-                                <span class="font-weight-bold">@todo.Status</span>
+                                <div>
+                                    <span class="font-weight-bold">@todo.Status</span>
+                                    <span><button class="btn btn-outline-primary oi oi-pencil" @onclick="@(e => Edit(@todo.Id))"></button></span>
+                                </div>
                         </li>
                         break;
                 }               
@@ -53,18 +73,51 @@
 @code {
     private IList<ToDo.Blazor.Models.ToDo> todos = new List<ToDo.Blazor.Models.ToDo>();
     string description;
+    string status;
+    int  _selectedId = 0;
 
+    private void Edit(int id){
+        _selectedId = id;
+        var selectedTodo= todos.FirstOrDefault(q => q.Id == id);
+        description = selectedTodo.Description;
+        status = selectedTodo.Status;
+        Console.WriteLine(id);
+    }
+ 
     protected override async Task OnInitAsync()
     {
         todos = await Http.GetJsonAsync<List<ToDo.Blazor.Models.ToDo>>("http://localhost:58635/api/ToDos");
     }
 
-    private void AddTodo()
+    private async Task SaveTodo()
     {
         if (!string.IsNullOrWhiteSpace(description))
         {
-            todos.Add(new ToDo.Blazor.Models.ToDo { Description = description });
+            using (var client = new HttpClient())
+            {
+                var newTodo = new ToDo.Blazor.Models.ToDo { Id = _selectedId, Description = @description, Status = status };
+                
+                var body = Newtonsoft.Json.JsonConvert.SerializeObject(newTodo);
+
+                System.Net.Http.HttpResponseMessage result;
+                if(_selectedId == 0){
+                    result = await client.PostAsync(@"http://localhost:58635/api/ToDos", new StringContent(body, System.Text.Encoding.UTF8, "application/json"));
+                }else{
+                    result = await client.PutAsync($@"http://localhost:58635/api/ToDos/{_selectedId}", new StringContent(body, System.Text.Encoding.UTF8, "application/json")); 
+                }
+
+                string resultContent = await result.Content.ReadAsStringAsync();
+
+                if (result.IsSuccessStatusCode)
+                {
+                    todos = await Http.GetJsonAsync<List<ToDo.Blazor.Models.ToDo>>("http://localhost:58635/api/ToDos");
+                }
+                Console.WriteLine(resultContent);
+            }
+            
             description = string.Empty;
+            status = "Pending";
+            _selectedId = 0;
         }
     }
 }
